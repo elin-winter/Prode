@@ -1,5 +1,5 @@
 %resultado(UnPais, GolesDeUnPais, OtroPais, GolesDeOtroPais).
-resultado(paises_bajos, 3, estados_unidos, 1). % Paises bajos 3 - 1 Estados unidos
+resultado(paises_bajos, 5, estados_unidos, 1). % Paises bajos 3 - 1 Estados unidos
 resultado(australia, 1, argentina, 2). % Australia 1 - 2 Argentina
 resultado(polonia, 3, francia, 1).
 resultado(inglaterra, 3, senegal, 0).
@@ -12,6 +12,12 @@ pronostico(gus, gano(japon, croacia, 2, 0)).
 pronostico(lucas, gano(paises_bajos, estados_unidos, 3, 1)).
 pronostico(lucas, gano(argentina, australia, 2, 0)).
 pronostico(lucas, gano(croacia, japon, 1 , 0)).
+
+pais(Pais):-
+    resultado(Pais, _, _, _).
+
+pais(Pais):-
+    resultado(_, _, Pais, _).
 
 % ------------------- Puntos ---------------------
 % ----------- Punto 1
@@ -79,12 +85,10 @@ puntosPronostico(empataron(Pais1, Pais2, _), 100) :-
 
 invicto(Jugador) :- 
     pronostico(Jugador, _),
-    findall(Puntaje, 
-        (pronostico(Jugador, Pronostico), 
-        puntosPronostico(Pronostico, Puntaje)),
-        Puntajes),
-    Puntajes \= [],
-    forall(member(Puntos, Puntajes), Puntos >= 100).   
+    forall((
+        pronostico(Jugador, Pronostico), 
+        puntosPronostico(Pronostico, Puntaje)), 
+        Puntaje >= 100).
 
 % ----------- Punto 4
 puntaje(Jugador, PuntajeTotal) :-
@@ -94,9 +98,33 @@ puntaje(Jugador, PuntajeTotal) :-
 
 % ----------- Punto 5
 favorito(Pais) :-
-    pronostico(_, gano(Pais,_,_,_)),
-    not(forall(pronostico(_,Pronostico), (Pronostico \= gano(_,Pais,_,_) , Pronostico \= empato(Pais,_,_), Pronostico \= empato(_,Pais,_)))).
+    pais(Pais),
+    leGano(Pais, _),
+    forall(partidoGanado(Pais, Diferencia),
+        ganoPorGoleada(Diferencia)).
 
-% El país ganó todos sus partidos por goleada (>= 3 goles de diferencia)
-favorito(Pais) :-
-    forall(leGano(Pais, _), (jugaron(Pais, _, Diferencia), Diferencia >= 3)).
+favorito(Pais):-
+    pais(Pais),
+    pronostico(_, gano(Pais,_,_,_)),
+    forall(
+        pronosticoPais(Pronostico, Pais), 
+        esGanador(Pronostico, Pais)).
+
+pronosticoPais(Pronostico, Pais):-
+    pronostico(_, Pronostico),
+    pronosticoDelPais(Pronostico, Pais).
+
+pronosticoDelPais(gano(Pais, _, _, _), Pais).
+pronosticoDelPais(gano(_, Pais, _, _), Pais).
+pronosticoDelPais(empataron(Pais, _, _), Pais).
+pronosticoDelPais(empataron(_, Pais, _), Pais).
+
+esGanador(gano(Pais, _, _, _), Pais).
+
+partidoGanado(Pais, Diferencia):-
+    leGano(Pais, Otro),
+    jugaron(Pais, Otro, Dif),
+    abs(Dif, Diferencia).
+
+ganoPorGoleada(Diferencia):-
+    Diferencia >= 3.
